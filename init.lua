@@ -1,6 +1,65 @@
+function wifi_client_set(nw_acc, nw_set)
+  --use station mode, where the device joins an existing network
+  -- nw_acc is a table with "ssid" and "pass" elements
+  -- nw_set is optional IP-settings that device will use after a new connection established
+  -- nw_set is a table with "ip", "nwm" and "gw" elements
+
+  -- mode 
+  wifi.setmode(wifi.STATION)
+  -- IP settings
+  if (nw_set ~= nil)then
+    wifi.sta.setip({ip=nw_set.ip,netmask=nw_set.nwm,gateway=nw_set.wg})        
+  end
+
+  --wifi network settings
+  station_cfg={}
+  station_cfg.ssid=nw_acc.ssid
+  station_cfg.pwd=nw_acc.pass
+  station_cfg.save=false
+
+  wifi.sta.config(station_cfg)
+
+  print(wifi.sta.getip())
+	
+  collectgarbage();
+end
+
+
+function wifi_client_set_defaults()
+  nw_acc = {ssid="WIFI-NETWORK", pass="12345678"}
+  wifi_client_set(nw_acc)
+  collectgarbage();
+end
+
+
+function wifi_client_set_users()
+  nw_set = {ip="192.168.0.8",nwm="255.255.255.0",gw="192.168.0.1"}
+  nw_acc = {ssid="NETGEAR2G", pass="*****"}
+  wifi_client_set(nw_acc, nw_set)
+  collectgarbage();
+end
+
+
+--wifi_client_set_defaults()
+wifi_client_set_users()
+
+-- DEBUG stuff
+wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
+ print("\n\tSTA - CONNECTED".."\n\tSSID: "..T.SSID.."\n\tBSSID: "..
+ T.BSSID.."\n\tChannel: "..T.channel)
+end)
+
+wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
+ print("\n\tSTA - GOT IP".."\n\tStation IP: "..T.IP.."\n\tSubnet mask: "..
+ T.netmask.."\n\tGateway IP: "..T.gateway)
+end)
+
+
+
+-- TCP/IP server, HTTP web client
 function receiver(client,request)
-        print(request)
-        print(node.heap())
+        print("receiver")
+        --print(node.heap())
         
         local buf = "";
         
@@ -46,18 +105,17 @@ function receiver(client,request)
         collectgarbage();
 end
 
-wifi.setmode(wifi.STATION)
---wifi.sta.setip({ip="192.168.178.200",netmask="255.255.255.0",gateway="192.168.178.1"})
-wifi.sta.setip({ip="192.168.0.8",netmask="255.255.255.0",gateway="192.168.0.1"})
+srv=net.createServer(net.TCP)
+print(node.heap())
+srv:listen(80,function(conn)
+    conn:on("receive", receiver)
+    conn:on("sent", function(conn) conn:close() end)
+    collectgarbage();
+    end)
 
-station_cfg={}
-station_cfg.ssid="NETGEAR2G"
-station_cfg.pwd="********"
-station_cfg.save=false
-wifi.sta.config(station_cfg)
 
-print(wifi.sta.getip())
 
+-- PWM, motor controller
 led1 = 1
 led1_pwm = 150
 led1_pwm_c = 150
@@ -108,10 +166,4 @@ end)
 
 mytimer:start()
 
-srv=net.createServer(net.TCP)
-print(node.heap())
-srv:listen(80,function(conn)
-    conn:on("receive", receiver)
-    conn:on("sent", function(conn) conn:close() end)
-    collectgarbage();
-    end)
+
