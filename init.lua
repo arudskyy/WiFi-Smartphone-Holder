@@ -24,13 +24,12 @@ function wifi_client_set(nw_acc, nw_set)
   collectgarbage();
 end
 
-
+-- (#5)
 function wifi_client_set_defaults()
   nw_acc = {ssid="WIFI-NETWORK", pass="12345678"}
   wifi_client_set(nw_acc)
   collectgarbage();
 end
-
 
 function wifi_client_set_users()
   nw_set = {ip="192.168.0.8",nwm="255.255.255.0",gw="192.168.0.1"}
@@ -38,6 +37,13 @@ function wifi_client_set_users()
   wifi_client_set(nw_acc, nw_set)
   collectgarbage();
 end
+
+
+-- mDNS stuff (#13)
+wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
+ --print("\n\tSTA - GOT IP".."\n\tStation IP: "..T.IP.."\n\tSubnet mask: "..T.netmask.."\n\tGateway IP: "..T.gateway)
+ mdns.register("smartphoneholder", { service="http", port=80 })
+end)
 
 
 --wifi_client_set_defaults()
@@ -49,21 +55,16 @@ wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
  T.BSSID.."\n\tChannel: "..T.channel)
 end)
 
-wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
- print("\n\tSTA - GOT IP".."\n\tStation IP: "..T.IP.."\n\tSubnet mask: "..
- T.netmask.."\n\tGateway IP: "..T.gateway)
-end)
-
-
 
 -- TCP/IP server, HTTP web client
 function receiver(client,request)
         print("receiver")
-        --print(node.heap())
+        print(request)
         
         local buf = "";
         
         local _, _, method, path, vars = string.find(request, "([A-Z]+) (.+)?(.+) HTTP");
+        print(method, path, vars)
         if(method == nil)then
             _, _, method, path = string.find(request, "([A-Z]+) (.+) HTTP");
         end
@@ -87,9 +88,6 @@ function receiver(client,request)
               if led2_pwm<200 then led2_pwm = led2_pwm + 13 end
         end
         buf = buf.."HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n";
-        --buf = buf.."Content-Type: text/html";
-        --buf = buf.."\r\n";
-        --buf = buf..[[<!DOCTYPE html>]];
         buf = buf..[[<html> <head> <meta http-equiv="Content-Type" content="text/html; charset=utf-8"> <title>Camera Control</title>]];
         buf = buf.."</head> <body>";
         buf = buf..[[<style type="text/css"> button{font-size: 200%;} </style>]];
