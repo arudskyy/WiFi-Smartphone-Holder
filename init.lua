@@ -1,47 +1,47 @@
 function wifi_client_set(nw_acc, nw_set)
-  --use station mode, where the device joins an existing network
-  -- nw_acc is a table with "ssid" and "pass" elements
-  -- nw_set is optional IP-settings that device will use after a new connection established
-  -- nw_set is a table with "ip", "nwm" and "gw" elements
+--use station mode, where the device joins an existing network
+-- nw_acc is a table with "ssid" and "pass" elements
+-- nw_set is optional IP-settings that device will use after a new connection established
+-- nw_set is a table with "ip", "nwm" and "gw" elements
 
-  -- mode 
-  wifi.setmode(wifi.STATION)
-  -- IP settings
-  if (nw_set ~= nil)then
-    wifi.sta.setip({ip=nw_set.ip,netmask=nw_set.nwm,gateway=nw_set.wg})        
-  end
+-- mode 
+ wifi.setmode(wifi.STATION)
+-- IP settings
+ if (nw_set ~= nil)then
+  wifi.sta.setip({ip=nw_set.ip,netmask=nw_set.nwm,gateway=nw_set.wg})        
+ end
 
-  --wifi network settings
-  station_cfg={}
-  station_cfg.ssid=nw_acc.ssid
-  station_cfg.pwd=nw_acc.pass
-  station_cfg.save=false
+--wifi network settings
+ station_cfg={}
+ station_cfg.ssid=nw_acc.ssid
+ station_cfg.pwd=nw_acc.pass
+ station_cfg.save=false
 
-  wifi.sta.config(station_cfg)
+ wifi.sta.config(station_cfg)
 
-  print(wifi.sta.getip())
+ print(wifi.sta.getip())
 	
-  collectgarbage();
+ collectgarbage();
 end
 
 -- (#5)
 function wifi_client_set_defaults()
-  nw_acc = {ssid="WIFI-NETWORK", pass="12345678"}
-  wifi_client_set(nw_acc)
-  collectgarbage();
+ nw_acc = {ssid="WIFI-NETWORK", pass="12345678"}
+ wifi_client_set(nw_acc)
+ collectgarbage();
 end
 
 function wifi_client_set_users()
-  nw_set = {ip="192.168.0.8",nwm="255.255.255.0",gw="192.168.0.1"}
-  nw_acc = {ssid="NETGEAR2G", pass="*****"}
-  wifi_client_set(nw_acc, nw_set)
-  collectgarbage();
+ nw_set = {ip="192.168.0.8",nwm="255.255.255.0",gw="192.168.0.1"}
+ nw_acc = {ssid="NETGEAR2G", pass="*****"}
+ wifi_client_set(nw_acc, nw_set)
+ collectgarbage();
 end
 
 
--- mDNS stuff (#13)
+-- mDNS stuff (#13): register mDNS if IP-address assigned
 wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
- --print("\n\tSTA - GOT IP".."\n\tStation IP: "..T.IP.."\n\tSubnet mask: "..T.netmask.."\n\tGateway IP: "..T.gateway)
+--print("\n\tSTA - GOT IP".."\n\tStation IP: "..T.IP.."\n\tSubnet mask: "..T.netmask.."\n\tGateway IP: "..T.gateway)
  mdns.register("smartphoneholder", { service="http", port=80 })
 end)
 
@@ -56,45 +56,70 @@ wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
 end)
 
 
+function position_ctrl(par)
+--position controller
+ print("position_ctrl:",par.pin)
+
+ if(par.pin == "ON1")then
+  if led1_pwm>100 then led1_pwm = led1_pwm - 13 end
+ elseif(par.pin == "OFF1")then
+  if led1_pwm<200 then led1_pwm = led1_pwm + 13 end
+ elseif(par.pin == "ON2")then
+  if led2_pwm>100 then led2_pwm = led2_pwm - 13 end
+ elseif(par.pin == "OFF2")then
+  if led2_pwm<200 then led2_pwm = led2_pwm + 13 end
+ end
+       
+ collectgarbage();
+end
+
+
 -- TCP/IP server, HTTP web client
 function receiver(client,request)
-        print("receiver")
-        print(request)
-        
-        local buf = "";
-        
-        local _, _, method, path, vars = string.find(request, "([A-Z]+) (.+)?(.+) HTTP");
-        print(method, path, vars)
-        if(method == nil)then
-            _, _, method, path = string.find(request, "([A-Z]+) (.+) HTTP");
-        end
-        local _GET = {}
-        if (vars ~= nil)then
-            for k, v in string.gmatch(vars, "(%w+)=(%w+)&*") do
-                _GET[k] = v
-            end
-        end
+print("receiver")
+print(request)
+--parse request to get method, action and arguments       
+ local _, _, method, action, args = string.find(request, "([A-Z]+) (.+)?(.+) HTTP");
 
-        local _on,_off = "",""
-        if(_GET.pin == "ON1")then
-              if led1_pwm>100 then led1_pwm = led1_pwm - 13 end
-              --pwm.setduty(led1,led1_pwm)
-        elseif(_GET.pin == "OFF1")then
-              if led1_pwm<200 then led1_pwm = led1_pwm + 13 end
-              --pwm.setduty(led1,led1_pwm)
-        elseif(_GET.pin == "ON2")then
-              if led2_pwm>100 then led2_pwm = led2_pwm - 13 end
-        elseif(_GET.pin == "OFF2")then
-              if led2_pwm<200 then led2_pwm = led2_pwm + 13 end
-        end
-        buf = buf.."HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n";
-        buf = buf..[[<html> <head> <meta http-equiv="Content-Type" content="text/html; charset=utf-8"> <title>Camera Control</title>]];
+ if(method == nil)then
+--in case of empty request
+  _, _, method, action = string.find(request, "([A-Z]+) (.+) HTTP");
+ end
+ local par = {}
+
+ if (args ~= nil)then
+--extract arguments
+  for k, v in string.gmatch(args, "(%w+)=(%w+)&*") do
+   par[k] = v
+  end
+ end
+
+print("method:", method, "act:",action, "args:",args)
+
+-- main command switch
+ if("/ctrl" == action)then
+  print("c o n t r o l")
+  position_ctrl(par)
+ elseif("/config"==action)then
+  print("c o n f i g u r a t i o n")
+ elseif("/set"==action)then
+  print("s e t")
+ elseif("/ignore"==action)then
+  print("i g n o r e")
+ else
+  print("d e f a u l t")
+ end
+        
+
+        
+        local buf = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n";
+        buf = buf..[[<html> <head> <meta http-equiv="Content-Type" content="text/html; charset=utf-8"> <title>WiFi Smartphone Holder</title>]];
         buf = buf.."</head> <body>";
         buf = buf..[[<style type="text/css"> button{font-size: 200%;} </style>]];
-        buf = buf.."<h1> Camera Control Web Server</h1>";
-        buf = buf.."<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"?pin=ON1\"><button>&nbsp;&nbsp;&uarr;&nbsp;&nbsp;</button></a></p>";
-        buf = buf.."<p><a href=\"?pin=ON2\"><button>&nbsp;&larr;&nbsp;</button></a>&nbsp;&nbsp;<a href=\"?pin=OFF2\"><button>&nbsp;&rarr;&nbsp;</button></a></p>";
-        buf = buf.."<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"?pin=OFF1\"><button>&nbsp;&nbsp;&darr;&nbsp;&nbsp;</button></a></p>";
+        buf = buf.."<h1>WiFi Smartphone Holder Control</h1>";
+        buf = buf.."<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=ON1\"><button>&nbsp;&nbsp;&uarr;&nbsp;&nbsp;</button></a></p>";
+        buf = buf.."<p><a href=\"ctrl?pin=ON2\"><button>&nbsp;&larr;&nbsp;</button></a>&nbsp;&nbsp;<a href=\"ctrl?pin=OFF2\"><button>&nbsp;&rarr;&nbsp;</button></a></p>";
+        buf = buf.."<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=OFF1\"><button>&nbsp;&nbsp;&darr;&nbsp;&nbsp;</button></a></p>";
         buf = buf.."</body> </html>";
         
         --print(buf);
@@ -103,6 +128,7 @@ function receiver(client,request)
         collectgarbage();
 end
 
+-- start TCP server
 srv=net.createServer(net.TCP)
 print(node.heap())
 srv:listen(80,function(conn)
