@@ -33,7 +33,7 @@ end
 
 function wifi_client_set_users()
  nw_set = {ip="192.168.0.8",nwm="255.255.255.0",gw="192.168.0.1"}
- nw_acc = {ssid="NETGEAR2G", pass="*****"}
+ nw_acc = {ssid="NETGEAR2G", pass="artemolga"}
  wifi_client_set(nw_acc, nw_set)
  collectgarbage();
 end
@@ -56,7 +56,7 @@ wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
 end)
 
 
-function position_ctrl(par)
+function cntrl_pos(par)
 --position controller
  print("position_ctrl:",par.pin)
 
@@ -73,8 +73,65 @@ function position_ctrl(par)
  collectgarbage();
 end
 
+head="HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n";
+head=head..[[<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>WiFi Smartphone Holder</title></head> <body>]];
+head=head.."<a href=\ctrl><button>Control</button></a><a href=\set><button>Settings</button></a><a href=\status><button>Status</button></a>";
 
--- TCP/IP server, HTTP web client
+function cntrl_web(client)
+--http answer to control
+ local buf=head..[[<style type="text/css"> button{font-size: 200%;} </style>]];
+ buf = buf.."<h1>Control 3</h1><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=ON1\"><button>&nbsp;&nbsp;&uarr;&nbsp;&nbsp;</button></a></p>";
+ buf = buf.."<p><a href=\"ctrl?pin=ON2\"><button>&nbsp;&larr;&nbsp;</button></a>&nbsp;&nbsp;<a href=\"ctrl?pin=OFF2\"><button>&nbsp;&rarr;&nbsp;</button></a></p>";
+ buf = buf.."<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=OFF1\"><button>&nbsp;&nbsp;&darr;&nbsp;&nbsp;</button></a></p>";
+ buf = buf.."</body> </html>";
+ client:send(buf);
+ collectgarbage();
+end
+
+
+function status_web(client)
+--http answer to status
+ local md,ssid,ip,nw,gw,ssid,mac;
+ if(wifi.STATION==wifi.getmode())then
+  md="Client"
+  ip,nw,gw=wifi.sta.getip();
+  ssid,_,_,mac=wifi.sta.getconfig()
+ elseif(wifi.SOFTAP==wifi.getmode())then
+  md="Access point"
+  ip,nw,gw=wifi.ap.getip();
+  ssid,_,_,mac=wifi.ap.getconfig()
+ else
+  md="unknown";
+  ip=md;nw=md;gw=md;ssid=md;mac=md;
+ end
+ local buf=head.."<h1>Device status</h1><table>";
+ buf = buf..[[<tr style="text-align:left"><th>WiFi mode:</th><th>]]..md.."</th></tr>";
+ buf = buf..[[<tr style="text-align:left"><th>Network name:</th><th>]]..ssid.."</th></tr>";
+ buf = buf..[[<tr style="text-align:left"><th>MAC:</th><th>]]..mac.."</th></tr>";
+ buf = buf..[[<tr style="text-align:left"><th>Address:</th><th>]]..ip.."</th></tr>";
+ buf = buf..[[<tr style="text-align:left"><th>Network mask:</th><th>]]..nw.."</th></tr>";
+ buf = buf..[[<tr style="text-align:left"><th>Gateway:</th><th>]]..gw.."</th></tr></table></body></html>";
+ client:send(buf);
+ collectgarbage();
+end
+
+
+function set_web(client,par)
+--http answer to set
+ local buf=head.."<h1>Client settings</h1><h2>Target network:</h2><table>";
+ buf = buf..[[<tr><th>Network name</th><th><input id="ssid" type="text" size="15" value="]]..par.ssid..[["></th></tr>]];
+ buf = buf..[[<tr><th>Password</th><th><input type="password" size="15" value="]]..par.pass..[["></th></tr></table><h2>IP settings:</h2><table>]];
+ buf = buf..[[<tr><th>Address</th><th><input id="ip" type="text" size="15" value="]]..par.ip..[["></th></tr>]];
+ buf = buf..[[<tr><th>Network mask</th><th><input id="nm" type="text" size="15" value="]]..par.nm..[["></th></tr>]];
+ buf = buf..[[<tr><th>Gateway</th><th><input id="gw" type="text" size="15" value="]]..par.gw..[["></th></tr></table></body></html>]];
+ buf = buf..[[<button onClick="reply()">Apply</button>]];
+ buf = buf..[[<script>function reply(){window.location="/set?ssid="+document.getElementById("ssid").value+"&ip="+document.getElementById("ip").value;}</script>]];
+ client:send(buf);
+ collectgarbage();
+end
+
+
+-- HTTP web client, main function
 function receiver(client,request)
 print("receiver")
 print(request)
@@ -97,35 +154,24 @@ print(request)
 print("method:", method, "act:",action, "args:",args)
 
 -- main command switch
- if("/ctrl" == action)then
-  print("c o n t r o l")
-  position_ctrl(par)
- elseif("/config"==action)then
+ if("/config"==action)then
   print("c o n f i g u r a t i o n")
  elseif("/set"==action)then
   print("s e t")
- elseif("/ignore"==action)then
-  print("i g n o r e")
+  par["ssid"]="SSSS";
+  par["pass"]="*****";
+  par["ip"]="000.111.222.333";
+  par["nm"]="000.111.222.333";
+  par["gw"]="000.111.222.333";
+  set_web(client,par)
+ elseif("/status"==action)then
+  status_web(client)
  else
-  print("d e f a u l t")
+  cntrl_pos(par)
+  cntrl_web(client)
  end
-        
 
-        
-        local buf = "HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n";
-        buf = buf..[[<html> <head> <meta http-equiv="Content-Type" content="text/html; charset=utf-8"> <title>WiFi Smartphone Holder</title>]];
-        buf = buf.."</head> <body>";
-        buf = buf..[[<style type="text/css"> button{font-size: 200%;} </style>]];
-        buf = buf.."<h1>WiFi Smartphone Holder Control</h1>";
-        buf = buf.."<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=ON1\"><button>&nbsp;&nbsp;&uarr;&nbsp;&nbsp;</button></a></p>";
-        buf = buf.."<p><a href=\"ctrl?pin=ON2\"><button>&nbsp;&larr;&nbsp;</button></a>&nbsp;&nbsp;<a href=\"ctrl?pin=OFF2\"><button>&nbsp;&rarr;&nbsp;</button></a></p>";
-        buf = buf.."<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=OFF1\"><button>&nbsp;&nbsp;&darr;&nbsp;&nbsp;</button></a></p>";
-        buf = buf.."</body> </html>";
-        
-        --print(buf);
-        client:send(buf);
-        --client:close();
-        collectgarbage();
+ collectgarbage();
 end
 
 -- start TCP server
