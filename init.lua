@@ -1,3 +1,76 @@
+-- configuration stuff
+-- global table, keeps configuration
+cfg={valid="0", file="cfg.txt"}
+
+function cfg_get()
+ if file.open(cfg.file, "r") then
+  --extract arguments
+  while true do
+   fl=file.readline()
+   if nil==fl then break end
+   for k, v in string.gmatch(fl, "(%w+)=([%w.]+)") do
+    cfg[k] = v
+   end
+  end
+  file.close()
+ end
+end
+
+function cfg_set()
+ if file.open(cfg.file, "w") then
+  for key,value in pairs(cfg) do
+   file.writeline(key.."="..value..";")
+  end
+  file.close()
+ end
+end
+
+function cfg_print()
+ print("___Configuration________")
+ for key,value in pairs(cfg) do print(key,value) end
+ print("________________________")
+end
+
+function cfg_reset()
+cfg.valid="0"
+ if file.exists(cfg.file) then
+  file.remove(cfg.file)
+ end
+end
+
+
+
+print("1")
+cfg_print()
+cfg_get()
+print("2")
+cfg_print()
+cfg_set()
+print("3")
+cfg_print()
+cfg_get()
+print("4")
+cfg_print()
+cfg.ip="10.10"
+cfg.valid="1"
+print("5")
+cfg_print()
+cfg_set()
+print("6")
+cfg_print()
+
+cfg_get()
+print("7")
+cfg_print()
+-- cfg_reset()
+print("8")
+cfg_print()
+cfg_get()
+print("9")
+cfg_print()
+-- end configuration
+
+
 function wifi_client_set(nw_acc, nw_set)
 --use station mode, where the device joins an existing network
 -- nw_acc is a table with "ssid" and "pass" elements
@@ -24,12 +97,6 @@ function wifi_client_set(nw_acc, nw_set)
  collectgarbage();
 end
 
--- (#5)
-function wifi_client_set_defaults()
- nw_acc = {ssid="WIFI-NETWORK", pass="12345678"}
- wifi_client_set(nw_acc)
- collectgarbage();
-end
 
 function wifi_client_set_users()
  nw_set = {ip="192.168.0.8",nwm="255.255.255.0",gw="192.168.0.1"}
@@ -95,11 +162,13 @@ function status_web(client)
  if(wifi.STATION==wifi.getmode())then
   md="Client"
   ip,nw,gw=wifi.sta.getip();
-  ssid,_,_,mac=wifi.sta.getconfig()
+  ssid,_,_,_=wifi.sta.getconfig()
+  mac=wifi.sta.getmac()
  elseif(wifi.SOFTAP==wifi.getmode())then
   md="Access point"
   ip,nw,gw=wifi.ap.getip();
-  ssid,_,_,mac=wifi.ap.getconfig()
+  ssid,_,_,_=wifi.ap.getconfig()
+  mac=wifi.ap.getmac()
  else
   md="unknown";
   ip=md;nw=md;gw=md;ssid=md;mac=md;
@@ -118,14 +187,24 @@ end
 
 function set_web(client,par)
 --http answer to set
+ local bk_err=[[ style="background-color:#ffcccc;"]];
+
  local buf=head.."<h1>Client settings</h1><h2>Target network:</h2><table>";
- buf = buf..[[<tr><th>Network name</th><th><input id="ssid" type="text" size="15" value="]]..par.ssid..[["></th></tr>]];
- buf = buf..[[<tr><th>Password</th><th><input type="password" size="15" value="]]..par.pass..[["></th></tr></table><h2>IP settings:</h2><table>]];
+ buf = buf.."<tr><th>Network name</th><th><input"..bk_err..[[id="ssid" type="text" size="15" value="]]..par.ssid..[["></th></tr>]];
+ buf = buf..[[<tr><th>Password</th><th><input id=pass type="password" size="15" value="]]..par.pass..[["></th></tr></table><h2>IP settings:</h2><table>]];
  buf = buf..[[<tr><th>Address</th><th><input id="ip" type="text" size="15" value="]]..par.ip..[["></th></tr>]];
  buf = buf..[[<tr><th>Network mask</th><th><input id="nm" type="text" size="15" value="]]..par.nm..[["></th></tr>]];
- buf = buf..[[<tr><th>Gateway</th><th><input id="gw" type="text" size="15" value="]]..par.gw..[["></th></tr></table></body></html>]];
- buf = buf..[[<button onClick="reply()">Apply</button>]];
- buf = buf..[[<script>function reply(){window.location="/set?ssid="+document.getElementById("ssid").value+"&ip="+document.getElementById("ip").value;}</script>]];
+ buf = buf..[[<tr><th>Gateway</th><th><input id="gw" type="text" size="15" value="]]..par.gw..[["></th></tr></table>]];
+ buf = buf..[[<h2>Mode-indicator, LED colors:</h2><table>]];
+ buf = buf..[[<tr><th>Client (user settings)</th><th><input id="ccu" type="color" value="]]..par.ccu..[["></th></tr>]];
+ buf = buf..[[<tr><th>Client (default settings) </th><th><input id="ccd" type="color" value="]]..par.ccd..[["></th></tr>]];
+ buf = buf..[[<tr><th>Access point</th><th><input id="cap" type="color" value="]]..par.cap..[["></th></tr></table>]];
+ buf = buf..[[<br><br><button onClick="apply()">Apply</button>]];
+ buf = buf..[[<script>function apply(){window.location="/set?ssid="+document.getElementById("ssid").value+"&pass="+document.getElementById("pass").value]];
+ buf = buf..[[+"&ip="+document.getElementById("ip").value+"&nm="+document.getElementById("nm").value+"&gw="+document.getElementById("gw").value]];
+ buf = buf..[[+"&ccu="+document.getElementById("ccu").value.slice(1)+"&ccd="+document.getElementById("ccd").value.slice(1)]];
+ buf = buf..[[+"&cap="+document.getElementById("cap").value.slice(1);}</script></body></html>]];
+ --buf = buf.."</body></html>";
  client:send(buf);
  collectgarbage();
 end
@@ -146,8 +225,9 @@ print(request)
 
  if (args ~= nil)then
 --extract arguments
-  for k, v in string.gmatch(args, "(%w+)=(%w+)&*") do
+  for k, v in string.gmatch(args, "([%w.]+)=([%w.]+)&*") do
    par[k] = v
+   print(k.."="..v)
   end
  end
 
@@ -158,11 +238,16 @@ print("method:", method, "act:",action, "args:",args)
   print("c o n f i g u r a t i o n")
  elseif("/set"==action)then
   print("s e t")
-  par["ssid"]="SSSS";
-  par["pass"]="*****";
+  if(nil==par["ssid"])then
+   par["ssid"]="enter SSID";
+  end
+  par["pass"]="12345";
   par["ip"]="000.111.222.333";
   par["nm"]="000.111.222.333";
   par["gw"]="000.111.222.333";
+  par["ccu"]="#00aa00";
+  par["ccd"]="#003333";
+  par["cap"]="#227799";
   set_web(client,par)
  elseif("/status"==action)then
   status_web(client)
@@ -178,10 +263,10 @@ end
 srv=net.createServer(net.TCP)
 print(node.heap())
 srv:listen(80,function(conn)
-    conn:on("receive", receiver)
-    conn:on("sent", function(conn) conn:close() end)
-    collectgarbage();
-    end)
+ conn:on("receive", receiver)
+ conn:on("sent", function(conn) conn:close() end)
+ collectgarbage();
+end)
 
 
 
