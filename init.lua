@@ -14,6 +14,16 @@ function cfg_get()
   end
   file.close()
  end
+ if "0"==cfg.valid then
+ -- default values
+  cfg.ssid="enter SSID"
+  cfg.pass="password"
+  cfg.ip="192.168.1.10"
+  cfg.nm="255.255.255.0"
+  cfg.gw="192.168.1.1"
+  cfg.cc="0000ff"
+  cfg.cap="00ff00"
+ end
 end
 
 function cfg_set()
@@ -37,37 +47,6 @@ cfg.valid="0"
   file.remove(cfg.file)
  end
 end
-
-
-
-print("1")
-cfg_print()
-cfg_get()
-print("2")
-cfg_print()
-cfg_set()
-print("3")
-cfg_print()
-cfg_get()
-print("4")
-cfg_print()
-cfg.ip="10.10"
-cfg.valid="1"
-print("5")
-cfg_print()
-cfg_set()
-print("6")
-cfg_print()
-
-cfg_get()
-print("7")
-cfg_print()
--- cfg_reset()
-print("8")
-cfg_print()
-cfg_get()
-print("9")
-cfg_print()
 -- end configuration
 
 
@@ -81,7 +60,7 @@ function wifi_client_set(nw_acc, nw_set)
  wifi.setmode(wifi.STATION)
 -- IP settings
  if (nw_set ~= nil)then
-  wifi.sta.setip({ip=nw_set.ip,netmask=nw_set.nwm,gateway=nw_set.wg})        
+  wifi.sta.setip({ip=nw_set.ip,netmask=nw_set.nwm,gateway=nw_set.gw})        
  end
 
 --wifi network settings
@@ -112,18 +91,13 @@ wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
  mdns.register("smartphoneholder", { service="http", port=80 })
 end)
 
-
---wifi_client_set_defaults()
-wifi_client_set_users()
-
 -- DEBUG stuff
 wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
- print("\n\tSTA - CONNECTED".."\n\tSSID: "..T.SSID.."\n\tBSSID: "..
- T.BSSID.."\n\tChannel: "..T.channel)
+ print("\n\tSTA - CONNECTED".."\n\tSSID: "..T.SSID.."\n\tBSSID: "..T.BSSID.."\n\tChannel: "..T.channel)
 end)
 
 
-function cntrl_pos(par)
+function pos_cntrl(par)
 --position controller
  print("position_ctrl:",par.pin)
 
@@ -140,14 +114,14 @@ function cntrl_pos(par)
  collectgarbage();
 end
 
-head="HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n";
-head=head..[[<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>WiFi Smartphone Holder</title></head> <body>]];
-head=head.."<a href=\ctrl><button>Control</button></a><a href=\set><button>Settings</button></a><a href=\status><button>Status</button></a>";
+head="HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n"
+head=head..[[<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>WiFi Smartphone Holder</title></head> <body>]]
+head=head.."<a href=\ctrl><button>Control</button></a><a href=\set><button>Settings</button></a><a href=\status><button>Status</button></a>"
 
-function cntrl_web(client)
+function web_cntrl(client)
 --http answer to control
  local buf=head..[[<style type="text/css"> button{font-size: 200%;} </style>]];
- buf = buf.."<h1>Control 3</h1><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=ON1\"><button>&nbsp;&nbsp;&uarr;&nbsp;&nbsp;</button></a></p>";
+ buf = buf.."<h1>Control</h1><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=ON1\"><button>&nbsp;&nbsp;&uarr;&nbsp;&nbsp;</button></a></p>";
  buf = buf.."<p><a href=\"ctrl?pin=ON2\"><button>&nbsp;&larr;&nbsp;</button></a>&nbsp;&nbsp;<a href=\"ctrl?pin=OFF2\"><button>&nbsp;&rarr;&nbsp;</button></a></p>";
  buf = buf.."<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=OFF1\"><button>&nbsp;&nbsp;&darr;&nbsp;&nbsp;</button></a></p>";
  buf = buf.."</body> </html>";
@@ -156,109 +130,136 @@ function cntrl_web(client)
 end
 
 
-function status_web(client)
+function web_status(client)
 --http answer to status
  local md,ssid,ip,nw,gw,ssid,mac;
  if(wifi.STATION==wifi.getmode())then
   md="Client"
-  ip,nw,gw=wifi.sta.getip();
+  ip,nw,gw=wifi.sta.getip()
   ssid,_,_,_=wifi.sta.getconfig()
   mac=wifi.sta.getmac()
  elseif(wifi.SOFTAP==wifi.getmode())then
   md="Access point"
-  ip,nw,gw=wifi.ap.getip();
+  ip,nw,gw=wifi.ap.getip()
   ssid,_,_,_=wifi.ap.getconfig()
   mac=wifi.ap.getmac()
  else
-  md="unknown";
+  md="unknown"
   ip=md;nw=md;gw=md;ssid=md;mac=md;
  end
- local buf=head.."<h1>Device status</h1><table>";
- buf = buf..[[<tr style="text-align:left"><th>WiFi mode:</th><th>]]..md.."</th></tr>";
- buf = buf..[[<tr style="text-align:left"><th>Network name:</th><th>]]..ssid.."</th></tr>";
- buf = buf..[[<tr style="text-align:left"><th>MAC:</th><th>]]..mac.."</th></tr>";
- buf = buf..[[<tr style="text-align:left"><th>Address:</th><th>]]..ip.."</th></tr>";
- buf = buf..[[<tr style="text-align:left"><th>Network mask:</th><th>]]..nw.."</th></tr>";
- buf = buf..[[<tr style="text-align:left"><th>Gateway:</th><th>]]..gw.."</th></tr></table></body></html>";
- client:send(buf);
- collectgarbage();
+ local buf=head.."<h1>Device status</h1><table>"
+ buf = buf..[[<tr style="text-align:left"><th>WiFi mode:</th><th>]]..md.."</th></tr>"
+ buf = buf..[[<tr style="text-align:left"><th>Network name:</th><th>]]..ssid.."</th></tr>"
+ buf = buf..[[<tr style="text-align:left"><th>MAC:</th><th>]]..mac.."</th></tr>"
+ buf = buf..[[<tr style="text-align:left"><th>Address:</th><th>]]..ip.."</th></tr>"
+ buf = buf..[[<tr style="text-align:left"><th>Network mask:</th><th>]]..nw.."</th></tr>"
+ buf = buf..[[<tr style="text-align:left"><th>Gateway:</th><th>]]..gw.."</th></tr></table></body></html>"
+ client:send(buf)
+ collectgarbage()
 end
 
 
-function set_web(client,par)
+function web_set(client,par,err)
 --http answer to set
- local bk_err=[[ style="background-color:#ffcccc;"]];
+ local bk_err=[[style="background-color:#ffcccc;"]]
 
- local buf=head.."<h1>Client settings</h1><h2>Target network:</h2><table>";
- buf = buf.."<tr><th>Network name</th><th><input"..bk_err..[[id="ssid" type="text" size="15" value="]]..par.ssid..[["></th></tr>]];
- buf = buf..[[<tr><th>Password</th><th><input id=pass type="password" size="15" value="]]..par.pass..[["></th></tr></table><h2>IP settings:</h2><table>]];
- buf = buf..[[<tr><th>Address</th><th><input id="ip" type="text" size="15" value="]]..par.ip..[["></th></tr>]];
- buf = buf..[[<tr><th>Network mask</th><th><input id="nm" type="text" size="15" value="]]..par.nm..[["></th></tr>]];
- buf = buf..[[<tr><th>Gateway</th><th><input id="gw" type="text" size="15" value="]]..par.gw..[["></th></tr></table>]];
- buf = buf..[[<h2>Mode-indicator, LED colors:</h2><table>]];
- buf = buf..[[<tr><th>Client (user settings)</th><th><input id="ccu" type="color" value="]]..par.ccu..[["></th></tr>]];
- buf = buf..[[<tr><th>Client (default settings) </th><th><input id="ccd" type="color" value="]]..par.ccd..[["></th></tr>]];
- buf = buf..[[<tr><th>Access point</th><th><input id="cap" type="color" value="]]..par.cap..[["></th></tr></table>]];
- buf = buf..[[<br><br><button onClick="apply()">Apply</button>]];
- buf = buf..[[<script>function apply(){window.location="/set?ssid="+document.getElementById("ssid").value+"&pass="+document.getElementById("pass").value]];
- buf = buf..[[+"&ip="+document.getElementById("ip").value+"&nm="+document.getElementById("nm").value+"&gw="+document.getElementById("gw").value]];
- buf = buf..[[+"&ccu="+document.getElementById("ccu").value.slice(1)+"&ccd="+document.getElementById("ccd").value.slice(1)]];
- buf = buf..[[+"&cap="+document.getElementById("cap").value.slice(1);}</script></body></html>]];
- --buf = buf.."</body></html>";
- client:send(buf);
- collectgarbage();
+ local buf=head.."<h1"
+ if(next(err))then buf = buf..[[ style="color:red;">Not entered valid c]]
+ else buf = buf..">C" end
+ buf = buf.."lient settings</h1><h2>Target network:</h2><table>"
+ buf = buf..[[<tr><th>Network name</th><th><input id="ssid" type="text" size="15" value="]]..par.ssid..[["></th></tr>]]
+ buf = buf..[[<tr><th>Password</th><th><input id=pass type="password" size="15" value="]]..par.pass..[["></th></tr></table><h2>IP settings:</h2><table>]]
+ buf = buf.."<tr><th>Address</th><th><input "
+ if(err.ip)then buf = buf..bk_err end
+ buf = buf..[[id="ip" type="text" size="15" value="]]..par.ip..[["></th></tr><tr><th>Network mask</th><th><input ]]
+ if(err.nm)then buf = buf..bk_err end
+ buf = buf..[[id="nm" type="text" size="15" value="]]..par.nm..[["></th></tr><tr><th>Gateway</th><th><input ]]
+ if(err.gw)then buf = buf..bk_err end
+ buf = buf..[[id="gw" type="text" size="15" value="]]..par.gw..[["></th></tr></table>]]
+ buf = buf..[[<h2>Mode-indicator, LED colors:</h2><table>]]
+ buf = buf..[[<tr><th>Client </th><th><input id="cc" type="color" value="#]]..par.cc..[["></th></tr>]]
+ buf = buf..[[<tr><th>Access point</th><th><input id="cap" type="color" value="#]]..par.cap..[["></th></tr></table>]]
+ buf = buf..[[<br><br><button onClick="apply()">Apply</button>]]
+ buf = buf..[[<script>function apply(){window.location="/apply?ssid="+document.getElementById("ssid").value+"&pass="+document.getElementById("pass").value]]
+ buf = buf..[[+"&ip="+document.getElementById("ip").value+"&nm="+document.getElementById("nm").value+"&gw="+document.getElementById("gw").value]]
+ buf = buf..[[+"&cc="+document.getElementById("cc").value.slice(1)+"&cap="+document.getElementById("cap").value.slice(1);}</script></body></html>]]
+ client:send(buf)
+ collectgarbage()
 end
 
+
+function checkip(ip)
+ local r=true
+ if nil~=string.match(ip,'^[1-9]%d*%.%d*%.%d*%.%d*$') then
+  local t = string.gmatch(ip,'([1-9]%d*)%.(%d*)%.(%d*)%.(%d*)$')
+  local x,y,v,w=t()
+  a=tonumber(x);b=tonumber(y);c=tonumber(v);d=tonumber(w)
+  if a<256 and b<256 and c<256 and d<256  then
+   r=false
+  end
+ end
+ collectgarbage()
+ return r;
+end
 
 -- HTTP web client, main function
 function receiver(client,request)
 print("receiver")
 print(request)
 --parse request to get method, action and arguments       
- local _, _, method, action, args = string.find(request, "([A-Z]+) (.+)?(.+) HTTP");
+ local _, _, method, action, args = string.find(request, "([A-Z]+) (.+)?(.+) HTTP")
 
  if(method == nil)then
 --in case of empty request
-  _, _, method, action = string.find(request, "([A-Z]+) (.+) HTTP");
+  _, _, method, action = string.find(request, "([A-Z]+) (.+) HTTP")
  end
  local par = {}
 
  if (args ~= nil)then
 --extract arguments
-  for k, v in string.gmatch(args, "([%w.]+)=([%w.]+)&*") do
-   par[k] = v
-   print(k.."="..v)
+  for k, v in string.gmatch(args, "([%w.]+)=([%w.%%]*)&*") do
+   par[k],_ = string.gsub(v, "%%20", " ")
+   print(k.."="..par[k])
   end
  end
 
 print("method:", method, "act:",action, "args:",args)
 
 -- main command switch
- if("/config"==action)then
-  print("c o n f i g u r a t i o n")
- elseif("/set"==action)then
-  print("s e t")
-  if(nil==par["ssid"])then
-   par["ssid"]="enter SSID";
+ if("/set"==action)then
+  local err={}
+  if "0"==cfg.valid then
+   err.ip=true;err.nm=true;err.gw=true
   end
-  par["pass"]="12345";
-  par["ip"]="000.111.222.333";
-  par["nm"]="000.111.222.333";
-  par["gw"]="000.111.222.333";
-  par["ccu"]="#00aa00";
-  par["ccd"]="#003333";
-  par["cap"]="#227799";
-  set_web(client,par)
+  web_set(client,cfg,err)
+
+ elseif("/apply"==action)then
+  local err={}
+  if par.ip==par.nm and par.ip==par.gw and par.ip=="" then
+  else
+   if checkip(par.ip) then err.ip=true end
+   if checkip(par.nm) then err.nm=true end
+   if checkip(par.gw) then err.gw=true end
+  end
+  web_set(client,par,err)
+
  elseif("/status"==action)then
-  status_web(client)
+  web_status(client)
+
  else
-  cntrl_pos(par)
-  cntrl_web(client)
+  pos_cntrl(par)
+  web_cntrl(client)
  end
 
  collectgarbage();
 end
 
+
+--MAIN--
+-- get stored configuration
+cfg_get()
+--wifi_client_set_defaults()
+wifi_client_set_users()
 -- start TCP server
 srv=net.createServer(net.TCP)
 print(node.heap())
