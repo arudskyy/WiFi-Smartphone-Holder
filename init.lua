@@ -1,10 +1,10 @@
--- configuration stuff
--- global table, keeps configuration
+----configuration stuff
+--global table, keeps configuration
 cfg={valid="0", file="cfg.txt"}
 
 function cfg_get()
  if file.open(cfg.file, "r") then
-  --extract arguments
+--extract arguments
   while true do
    fl=file.readline()
    if nil==fl then break end
@@ -15,7 +15,7 @@ function cfg_get()
   file.close()
  end
  if "0"==cfg.valid then
- -- default values
+--default values
   cfg.ssid="enter SSID"
   cfg.pass="password"
   cfg.ip="192.168.1.10"
@@ -47,49 +47,54 @@ cfg.valid="0"
   file.remove(cfg.file)
  end
 end
--- end configuration
+----end configuration
 
-
-function wifi_client_set(nw_acc, nw_set)
---use station mode, where the device joins an existing network
--- nw_acc is a table with "ssid" and "pass" elements
--- nw_set is optional IP-settings that device will use after a new connection established
--- nw_set is a table with "ip", "nwm" and "gw" elements
-
--- mode 
+----wifi modes
+function wifi_start_client(par)
+--use station(client) mode, where the device joins an existing network
+--par is a table with "ssid" and "pass" elements
+--ip in par is optional IP-settings that device will use after a new connection established
+--nw_set is a table with "ip", "nm" and "gw" elements
+--mode 
  wifi.setmode(wifi.STATION)
--- IP settings
- if (nw_set ~= nil)then
-  wifi.sta.setip({ip=nw_set.ip,netmask=nw_set.nwm,gateway=nw_set.gw})        
+--IP settings
+ if (par.ip~="")then
+  wifi.sta.setip({ip=par.ip,netmask=par.nm,gateway=par.gw})        
  end
-
 --wifi network settings
- station_cfg={}
- station_cfg.ssid=nw_acc.ssid
- station_cfg.pwd=nw_acc.pass
- station_cfg.save=false
+ st_cfg={ssid=par.ssid,pwd=par.pass,save=false}
+ wifi.sta.config(st_cfg)
 
- wifi.sta.config(station_cfg)
-
- print(wifi.sta.getip())
-	
- collectgarbage();
+ collectgarbage()
 end
 
 
-function wifi_client_set_users()
- nw_set = {ip="192.168.0.8",nwm="255.255.255.0",gw="192.168.0.1"}
- nw_acc = {ssid="NETGEAR2G", pass="artemolga"}
- wifi_client_set(nw_acc, nw_set)
- collectgarbage();
+function wifi_start_ap()
+--activates access point mode
+print("wifi_start_ap")
+m=wifi.setmode(wifi.SOFTAP)
+print("SOFTAP "..m.."/"..wifi.SOFTAP)
+--
+ local a,b,mac=wifi.ap.getmac()
+ print(mac)
+ --a,b=string.gmatch(mac,'([a-f0-9]+):([a-f0-9]+)$')
+ --print(a,b)
+ local ap_cfg={}
+ ap_cfg.ssid="WIFI Smartphone holder " --..a..b
+ print(ap_cfg.ssid)
+ ap_cfg.pwd="smartholder"
+ wifi.ap.config(ap_cfg)
+ mac=wifi.ap.getmac()
+ print(mac)
 end
 
 
--- mDNS stuff (#13): register mDNS if IP-address assigned
+-- mDNS stuff: register mDNS if IP-address assigned
 wifi.eventmon.register(wifi.eventmon.STA_GOT_IP, function(T)
---print("\n\tSTA - GOT IP".."\n\tStation IP: "..T.IP.."\n\tSubnet mask: "..T.netmask.."\n\tGateway IP: "..T.gateway)
  mdns.register("smartphoneholder", { service="http", port=80 })
 end)
+----end wifi modes
+
 
 -- DEBUG stuff
 wifi.eventmon.register(wifi.eventmon.STA_CONNECTED, function(T)
@@ -132,7 +137,7 @@ end
 
 function web_status(client)
 --http answer to status
- local md,ssid,ip,nw,gw,ssid,mac;
+ local md,ssid,ip,nw,gw,ssid,mac
  if(wifi.STATION==wifi.getmode())then
   md="Client"
   ip,nw,gw=wifi.sta.getip()
@@ -259,7 +264,8 @@ end
 -- get stored configuration
 cfg_get()
 --wifi_client_set_defaults()
-wifi_client_set_users()
+--wifi_client_set_users()
+wifi_start_ap()
 -- start TCP server
 srv=net.createServer(net.TCP)
 print(node.heap())
