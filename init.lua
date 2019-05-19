@@ -201,16 +201,15 @@ end
 
 --http answer to set
 function web_set(client,par,err)
- local buf="HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n"
- buf=buf..[[<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>WiFi Smartphone Holder</title></head> <body>]]
- buf=buf.."<h1>Client settings</h1><h2>Target network:</h2><table>"
+ local buf=head.."<h1>Client settings</h1><h2>Target network:</h2><table>"
  buf=buf..[[<tr><th>Network name</th><th><input id="ssid" type="text" size="15" value="]]..par.ssid..[["></th></tr>]]
  buf=buf..[[<tr><th>Password</th><th><input id=pass type="password" size="15" value="]]..par.pass..[["></th></tr></table><h2>IP settings:</h2><table>]]
  buf=buf.."<tr><th>Address</th><th><input "
  buf=buf..[[id="ip" type="text" size="15" value="]]..par.ip..[["></th></tr><tr><th>Network mask</th><th><input ]]
  buf=buf..[[id="nm" type="text" size="15" value="]]..par.nm..[["></th></tr><tr><th>Gateway</th><th><input ]]
  buf=buf..[[id="gw" type="text" size="15" value="]]..par.gw..[["></th></tr></table>]]
- buf=buf..[[<h2>Mode-indicator, LED colors:</h2><table>]]
+ client:send(buf)
+ buf=[[<h2>Mode-indicator, LED colors:</h2><table>]]
  buf=buf..[[<tr><th>Client </th><th><input id="cc" type="color" value="#]]..par.cc..[["></th></tr>]]
  buf=buf..[[<tr><th>Access point</th><th><input id="cap" type="color" value="#]]..par.cap..[["></th></tr></table>]]
  buf=buf..[[<br><br><button onClick="apply()">Apply</button>]]
@@ -252,7 +251,6 @@ end
 
 -- HTTP web client, main function
 function receiver(client,request)
---print("receiver")
 --print(request)
 --parse request to get method, action and arguments       
  local _, _, method, action, args = string.find(request, "([A-Z]+) (.+)?(.+) HTTP")
@@ -272,46 +270,47 @@ function receiver(client,request)
  end
 --print("method:", method, "act:",action, "args:",args)
 
+ local err={}
 -- main command switch
  if("/set"==action)then
- if(wifi.SOFTAP==wifi.getmode())then
-  local err={}
-  if "0"==cfg.valid then
-   err.ip=true;err.nm=true;err.gw=true
+  if(wifi.SOFTAP==wifi.getmode())then
+   if "0"==cfg.valid then
+    err.ip=true;err.nm=true;err.gw=true
+   end
+   web_set(client,cfg,err)
+  else
+   web_notallowed(client)
   end
-  web_set(client,cfg,err)
- else
-  web_notallowed(client)
- end
 
  elseif("/apply"==action)then
- if(wifi.SOFTAP==wifi.getmode())then
-  local err={}
-  if par.ip==par.nm and par.ip==par.gw and par.ip=="" then
-  else
-   if checkip(par.ip) then err.ip=true end
-   if checkip(par.nm) then err.nm=true end
-   if checkip(par.gw) then err.gw=true end
-  end
+  if(wifi.SOFTAP==wifi.getmode())then
+   if par.ip~="" or par.nm~="" or par.gw~="" then
+    if checkip(par.ip) then err.ip=true end
+    if checkip(par.nm) then err.nm=true end
+    if checkip(par.gw) then err.gw=true end
+   end
 --if table is not empty then some error ocured:call set one more time
-  if next(err)~=nil then
-   web_set(client,par,err)
-  else
+   if next(err)~=nil then
+    web_set(client,par,err)
+   else
 --apply parameters
-   web_apply(client,par)
+    web_apply(client,par)
 --copy parameters to configuration and store they
-   cfg.ssid=par.ssid;cfg.pass=par.pass;cfg.ip=par.ip;cfg.nm=par.nm;cfg.gw=par.gw;cfg.cc=par.cc;cfg.cap=par.cap;cfg.valid="1"
-   cfg_save()
+    cfg.ssid=par.ssid;cfg.pass=par.pass;cfg.ip=par.ip;cfg.nm=par.nm;cfg.gw=par.gw;cfg.cc=par.cc;cfg.cap=par.cap;cfg.valid="1"
+    cfg_save()
+   end
+  else
+   web_notallowed(client)
   end
- else
-  web_notallowed(client)
- end
 
  elseif("/status"==action)then
   web_status(client)
- else
+
+ elseif("/"==action or "/ctrl"==action)then
   pos_cntrl(par)
   web_cntrl(client)
+ else
+  print("unsupported request: "..action)
  end
 
  collectgarbage();
