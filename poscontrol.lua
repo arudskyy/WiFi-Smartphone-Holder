@@ -1,74 +1,81 @@
 -- poscontrol.lua: position controller
 -- dependency: no
 
+step1_pin = 1
+dir1_pin = 2
+en1_pin = 0
+
+step2_pin = 12
+dir2_pin = 4
+en2_pin = 6
+
+step_freq = 300
+
+gpio.mode(dir1_pin, gpio.OUTPUT)
+gpio.write(dir1_pin, gpio.LOW)
+
+gpio.mode(en1_pin, gpio.OUTPUT)
+gpio.write(en1_pin, gpio.HIGH)
+
+gpio.mode(dir2_pin, gpio.OUTPUT)
+gpio.write(dir2_pin, gpio.HIGH)
+
+gpio.mode(en2_pin, gpio.OUTPUT)
+gpio.write(en2_pin, gpio.HIGH)
+
+
+pwm.setup(step1_pin,step_freq,512)
+pwm.setup(step2_pin,step_freq,512)
+
+
+mytimer1 = tmr.create()
+
+mytimer1:register(300, tmr.ALARM_SEMI, function()
+    pwm.stop(step1_pin)
+    gpio.write(en1_pin, gpio.HIGH)
+end)
+
+mytimer2 = tmr.create()
+
+mytimer2:register(1000, tmr.ALARM_SEMI, function()
+    pwm.stop(step2_pin)
+    gpio.write(en2_pin, gpio.HIGH)
+    gpio.write(dir2_pin, gpio.HIGH)
+end)
+
 
 -- PWM, motor controller
 function poscontrol_cntrl(par)
 --position controller
- print("position_ctrl:",par.pin)
+ print("poscontrol_cntrl called with:",par.pin)
 
  if(par.pin == "ON1")then
-  if led1_pwm>100 then led1_pwm = led1_pwm - 13 end
+  gpio.write(dir1_pin, gpio.LOW)
+  gpio.write(en1_pin, gpio.LOW)
+  pwm.start(step1_pin)
+
+  mytimer1:start()
+              
  elseif(par.pin == "OFF1")then
-  if led1_pwm<200 then led1_pwm = led1_pwm + 13 end
+  gpio.write(dir1_pin, gpio.HIGH)
+  gpio.write(en1_pin, gpio.LOW)
+  pwm.start(step1_pin)
+
+  mytimer1:start()
+              
  elseif(par.pin == "ON2")then
-  if led2_pwm>100 then led2_pwm = led2_pwm - 13 end
+  gpio.write(dir2_pin, gpio.HIGH)
+  gpio.write(en2_pin, gpio.LOW)
+  pwm.start(step2_pin)
+
+  mytimer2:start()
+              
  elseif(par.pin == "OFF2")then
-  if led2_pwm<200 then led2_pwm = led2_pwm + 13 end
+  gpio.write(dir2_pin, gpio.LOW)
+  gpio.write(en2_pin, gpio.LOW)
+  pwm.start(step2_pin)
+
+  mytimer2:start()
  end
-       
  collectgarbage();
 end
-
-
-function poscontrol_init()
-end
-
-led1 = 1
-led1_pwm = 150
-led1_pwm_c = 150
-led1_pwm_status = 1
-led2 = 2
-led2_pwm = 150
-led2_pwm_c = 150
-led2_pwm_status = 1
-pwm.setup(led1,100,led1_pwm)
-pwm.start(led1)
-pwm.setup(led2,100,led2_pwm)
-pwm.start(led2)
-
-mytimer = tmr.create()
-
-mytimer:register(20, tmr.ALARM_AUTO, function() 
-    if led1_pwm_c==led1_pwm then
-        if led1_pwm_status==1 then
-            pwm.stop(led1)
-            led1_pwm_status = 0
-        end
-    else
-        if led1_pwm_c<led1_pwm then led1_pwm_c = led1_pwm_c + 1 end
-        if led1_pwm_c>led1_pwm then led1_pwm_c = led1_pwm_c - 1 end
-        pwm.setduty(led1,led1_pwm_c)
-        if led1_pwm_status==0 then
-            pwm.start(led1)
-            led1_pwm_status = 1
-        end
-    end
-    
-    if led2_pwm_c==led2_pwm then
-        if led2_pwm_status==1 then
-            pwm.stop(led2)
-            led2_pwm_status = 0
-        end
-    else
-        if led2_pwm_c<led2_pwm then led2_pwm_c = led2_pwm_c + 1 end
-        if led2_pwm_c>led2_pwm then led2_pwm_c = led2_pwm_c - 1 end
-        pwm.setduty(led2,led2_pwm_c)
-        if led2_pwm_status==0 then
-            pwm.start(led2)
-            led2_pwm_status = 1
-        end
-    end
-
-end)
-mytimer:start()

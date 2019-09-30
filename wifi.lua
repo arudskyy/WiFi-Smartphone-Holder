@@ -48,7 +48,24 @@ WIFI_SM=WIFI_SM_INIT
 function wifi_sm_set(state)
  WIFI_SM=state
  print("WIFI state changed to: "..WIFI_SM)
+
+-- set led modes depending from state
+ if WIFI_SM=="apnc" then
+  led_cntrl(cfg.cap,false)
+ elseif WIFI_SM=="apcc" then
+  led_cntrl(cfg.cap,true)
+ elseif WIFI_SM=="clnc" then
+  led_cntrl(cfg.cc,false)
+ elseif WIFI_SM=="clcc" then
+  led_cntrl(cfg.cc,true)
+ end
+
  collectgarbage()
+end
+
+--function to refresh leds according to current mode
+function wifi_sm_refresh(state)
+ wifi_sm_set(WIFI_SM)
 end
 
 --state monitoring

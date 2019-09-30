@@ -174,7 +174,7 @@ end
 
 -- HTTP web client, dispatcher function 
 function web_receiver(client,request)
-print(request)
+--print(request)
 --parse request to get method, action and arguments       
  local _, _, method, action, args = string.find(request, "([A-Z]+) (.+)?(.+) HTTP")
 
@@ -210,9 +210,11 @@ print(request)
   web_call_onmode(client,web_check_apply,wifi.SOFTAP,par,true)
 
  elseif("/cccolor"==action)then
+  led_cntrl(par.cc,false)
   web_call_onmode(client,web_check_apply,wifi.SOFTAP,par,false)
 
  elseif("/capcolor"==action)then
+  led_cntrl(par.cap,false)
   web_call_onmode(client,web_check_apply,wifi.SOFTAP,par,false)
 
  elseif("/reset"==action)then
