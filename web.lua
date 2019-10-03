@@ -1,21 +1,10 @@
 -- web.lua: simplest HTTP web server implementation
 -- dependency: config.lua, pos_cntrl.lua
 
--- common header with buttons
-head="HTTP/1.0 200 OK\r\nContent-Type: text/html\r\n\r\n"
-head=head..[[<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>WiFi Smartphone Holder</title></head> <body>]]
-head=head.."<a href=\ctrl><button>Control</button></a><a href=\set><button>Settings</button></a><a href=\status><button>Status</button></a>"
-
-
 --http answer to control
 function web_cntrl(client)
- local buf=head..[[<style type="text/css"> button{font-size: 200%;} </style>]];
- buf=buf.."<h1>Control</h1><p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=ON1\"><button>&nbsp;&nbsp;&uarr;&nbsp;&nbsp;</button></a></p>";
- buf=buf.."<p><a href=\"ctrl?pin=ON2\"><button>&nbsp;&larr;&nbsp;</button></a>&nbsp;&nbsp;<a href=\"ctrl?pin=OFF2\"><button>&nbsp;&rarr;&nbsp;</button></a></p>";
- buf=buf.."<p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href=\"ctrl?pin=OFF1\"><button>&nbsp;&nbsp;&darr;&nbsp;&nbsp;</button></a></p>";
- buf=buf.."</body> </html>";
- client:send(buf);
- collectgarbage();
+ web_sendfile(client,"head.html")
+ web_sendfile(client,"cntrl.html")
 end
 
 
@@ -36,22 +25,28 @@ function web_status(client)
   md="unknown"
   ip=md;nw=md;gw=md;ssid=md;mac=md;
  end
- local buf=head.."<h1>Device status</h1><table>"
+
+ web_sendfile(client,"head.html")
+ local buf="<h1>Device status</h1><table>"
  buf=buf..[[<tr style="text-align:left"><th>WiFi mode:</th><th>]]..md.."</th></tr>"
  buf=buf..[[<tr style="text-align:left"><th>Network name:</th><th>]]..ssid.."</th></tr>"
  buf=buf..[[<tr style="text-align:left"><th>MAC:</th><th>]]..mac.."</th></tr>"
  buf=buf..[[<tr style="text-align:left"><th>Address:</th><th>]]..ip.."</th></tr>"
  buf=buf..[[<tr style="text-align:left"><th>Network mask:</th><th>]]..nw.."</th></tr>"
  buf=buf..[[<tr style="text-align:left"><th>Gateway:</th><th>]]..gw.."</th></tr></table></body></html>"
+ --buf=buf..[[<tr style="text-align:left"><th>Heap:</th><th>]]..tostring(node.heap()).."</th></tr></table></body></html>"
  client:send(buf)
- collectgarbage()
+ --collectgarbage()
 end
 
 
 --http answer to set
 function web_set(client,par,err)
  local bk_err=[[style="background-color:#ffcccc;"]]
- local buf=head.."<h1"
+
+ web_sendfile(client,"head.html")
+ 
+ local buf="<h1"
 
  if(web_checktable(err))then buf = buf..[[ style="color:red;">Not entered valid c]]
  else buf = buf..">C" end
@@ -75,24 +70,38 @@ function web_set(client,par,err)
  buf = buf..[[+"&cc="+document.getElementById("cc").value.slice(1)+"&cap="+document.getElementById("cap").value.slice(1);}]]
  buf = buf..[[</script></body></html>]]
  client:send(buf)
- collectgarbage()
+ --collectgarbage()
+end
+
+
+--sends file content to web
+function web_sendfile(client, filename)
+ local _line
+ if file.open(filename,"r") then
+  repeat _line = file.readline()
+   if (_line~=nil) then
+    --client:send(string.sub(_line,1,-2))
+    client:send(_line)
+   end
+  until _line==nil
+  file.close()
+ else
+  print("web_sendfile: can't open file: "..filename)
+ end
 end
 
 
 --http answer to apply
 function web_apply(client,par)
- local buf=head.."<h1>Client settings</h1><h2>Stored successfully!</h2><h2>Reset device to apply.</h2>"
- buf = buf..[[<br><button onClick="reset()">Reset</button>]]
- buf = buf..[[<script>function reset(){window.location="/reset";}</script></body></html>]]
- client:send(buf)
- collectgarbage()
+ web_sendfile(client,"head.html")
+ web_sendfile(client,"apply.html")
 end
 
 
 --http answer to reset
 function web_reset(client)
- local buf=head.."<h1>Device is resetting</h1></body></html>"
- client:send(buf)
+ web_sendfile(client,"head.html")
+ client:send("<h1>Device is resetting</h1></body></html>")
 --reset delay required to report reset web page
  web_reset_timer=tmr.create()
  web_reset_timer:register(1000, tmr.ALARM_SINGLE, function()  node.restart() end )
@@ -112,8 +121,7 @@ function web_checkipvals(ip)
    r=false
   end
  end
- collectgarbage()
- print (r)
+ --collectgarbage()
  return r
 end
 
@@ -141,15 +149,14 @@ function web_check_apply(client,par,save)
  else
   web_notallowed(client)
  end
- collectgarbage()
+ --collectgarbage()
 end
 
 
 --http answer to set and apply in Client mode
 function web_notallowed(client)
- local buf=head..[[<h2 style="color:red;">Functionality not available in Client mode</h2></body></html>]]
- client:send(buf)
- collectgarbage()
+ web_sendfile(client,"head.html")
+ client:send([[<h2 style="color:red;">Functionality not available in Client mode</h2></body></html>]])
 end
 
 
@@ -188,7 +195,7 @@ function web_receiver(client,request)
 --extract arguments
   for k, v in string.gmatch(args, "([%w.]+)=([%w.%%]*)&*") do
    par[k],_ = string.gsub(v, "%%20", " ")
-   print(k.."="..par[k])
+   --print(k.."="..par[k])
   end
  end
 
@@ -204,10 +211,10 @@ function web_receiver(client,request)
   local err={}
 --initially mark all fields like an error 
   if "0"==cfg.valid then err.ip=true;err.nm=true;err.gw=true end
-  web_call_onmode(client,web_set,wifi.SOFTAP,cfg,err)
+   web_call_onmode(client,web_set,wifi.SOFTAP,cfg,err)
   
   elseif("/apply"==action)then
-  web_call_onmode(client,web_check_apply,wifi.SOFTAP,par,true)
+   web_call_onmode(client,web_check_apply,wifi.SOFTAP,par,true)
 
  elseif("/cccolor"==action)then
   led_cntrl(par.cc,false)
@@ -217,11 +224,17 @@ function web_receiver(client,request)
   led_cntrl(par.cap,false)
   web_call_onmode(client,web_check_apply,wifi.SOFTAP,par,false)
 
+ elseif("/clear"==action)then
+  file.remove("cfg.txt")
+  web_reset(client)
+  
  elseif("/reset"==action)then
   web_call_onmode(client,web_reset,wifi.SOFTAP)
 
- else
-  print("unsupported request: "..action)
+ --elseif("/t"==action)then
+ -- print("..test..")
+ --else
+  --print("unsupported request: "..action)
  end
 
  collectgarbage();

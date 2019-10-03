@@ -10,7 +10,7 @@ function wifi_start_client(par)
 --mode 
  wifi.setmode(wifi.STATION)
 --IP settings
- if (par.ip~="")then
+ if (par.ip~=nil)then
   wifi.sta.setip({ip=par.ip,netmask=par.nm,gateway=par.gw})        
  end
 --wifi network settings
@@ -47,7 +47,7 @@ WIFI_SM=WIFI_SM_INIT
 --function to set mode(ro swith indication)
 function wifi_sm_set(state)
  WIFI_SM=state
- print("WIFI state changed to: "..WIFI_SM)
+ --print("WIFI state changed to: "..WIFI_SM)
 
 -- set led modes depending from state
  if WIFI_SM=="apnc" then

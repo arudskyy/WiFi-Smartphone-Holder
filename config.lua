@@ -22,8 +22,8 @@ function cfg_setdefault()
  cfg.ip="192.168.1.10"
  cfg.nm="255.255.255.0"
  cfg.gw="192.168.1.1"
- cfg.cc="0000ff"
- cfg.cap="00ff00"
+ cfg.cc="000080"
+ cfg.cap="008000"
 end
 
 -- load configuration from file
@@ -66,9 +66,9 @@ end
 
 
 -- print actual configuration
-function cfg_print()
- local k,v
- print("___Configuration________")
- for k,v in pairs(cfg) do print(k,v) end
- print("________________________")
-end
+--function cfg_print()
+-- local k,v
+-- print("___Configuration________")
+-- for k,v in pairs(cfg) do print(k,v) end
+-- print("________________________")
+--end

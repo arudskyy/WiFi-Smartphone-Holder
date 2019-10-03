@@ -47,13 +47,15 @@ end)
 -- PWM, motor controller
 function poscontrol_cntrl(par)
 --position controller
- print("poscontrol_cntrl called with:",par.pin)
+ --print("poscontrol_cntrl called with:",par.pin)
 
+ if(par~=nil) then
  if(par.pin == "ON1")then
   gpio.write(dir1_pin, gpio.LOW)
   gpio.write(en1_pin, gpio.LOW)
   pwm.start(step1_pin)
 
+  mytimer1:stop()
   mytimer1:start()
               
  elseif(par.pin == "OFF1")then
@@ -61,6 +63,7 @@ function poscontrol_cntrl(par)
   gpio.write(en1_pin, gpio.LOW)
   pwm.start(step1_pin)
 
+  mytimer1:stop()
   mytimer1:start()
               
  elseif(par.pin == "ON2")then
@@ -68,6 +71,7 @@ function poscontrol_cntrl(par)
   gpio.write(en2_pin, gpio.LOW)
   pwm.start(step2_pin)
 
+  mytimer2:stop()
   mytimer2:start()
               
  elseif(par.pin == "OFF2")then
@@ -75,7 +79,8 @@ function poscontrol_cntrl(par)
   gpio.write(en2_pin, gpio.LOW)
   pwm.start(step2_pin)
 
+  mytimer2:stop()
   mytimer2:start()
  end
- collectgarbage();
+ end
 end

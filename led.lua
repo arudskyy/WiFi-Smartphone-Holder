@@ -1,6 +1,5 @@
 -- led.lua: led controller
 -- dependency: poscontrol (initializes PWM frequency)
-
 ledR_pin = 5
 ledG_pin = 7
 ledB_pin = 8
@@ -14,7 +13,7 @@ gpio.write(ledG_pin, gpio.LOW)
 gpio.mode(ledB_pin, gpio.OUTPUT)
 gpio.write(ledB_pin, gpio.LOW)
 
-ledR_duty = 400
+ledR_duty = 0
 ledG_duty = ledR_duty
 ledB_duty = ledR_duty
 led_blnk=0
@@ -30,7 +29,7 @@ pwm.start(ledB_pin)
 
 -- PWM, led controller
 function led_cntrl(rgb_str, blnk)
-print(rgb_str, blnk)
+ --print(rgb_str, blnk)
  led_blnk=blnk
 
 --convert str to number
@@ -46,9 +45,9 @@ print(rgb_str, blnk)
  ledB_duty=b*4
 
  if true==blnk then
-  --led_flsh_timer:start()
+  led_flsh_timer:start()
  else
-  --led_flsh_timer:stop()
+  led_flsh_timer:stop()
   led_invalidate()
  end
 
@@ -62,7 +61,26 @@ led_flsh_duty_max=200
 led_flsh_duty_step=2
 led_flsh_duty=led_flsh_duty_max-led_flsh_duty_step
 
+led_flsh_timer = tmr.create()
 
+
+led_flsh_timer:register(50, tmr.ALARM_AUTO, function()
+ if(led_flsh_dir == 1)then
+  if(led_flsh_duty < led_flsh_duty_max)then
+   led_flsh_duty = led_flsh_duty + led_flsh_duty_step
+  else
+   led_flsh_dir = 0
+  end
+ else
+  if ( led_flsh_duty > led_flsh_duty_step )then
+   led_flsh_duty = led_flsh_duty - led_flsh_duty_step
+  else
+   led_flsh_dir = 1
+  end
+ end
+
+ led_invalidate()
+end)
 
 
 --calculates intensity for flashing
