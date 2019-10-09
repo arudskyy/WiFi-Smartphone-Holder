@@ -1,0 +1,41 @@
+<html>
+<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>WiFi Smartphone Holder</title></head>
+<body  onload="load()">
+<a href=\ctrl.html><button>Control</button></a><a href=\set.html><button>Settings</button></a><a href=\status.html><button>Status</button></a>
+ <script type="text/javascript" src="status.json"></script>
+ <script type="text/javascript" >
+  function load(){
+   var d=JSON.parse(jd);
+   var mode    = document.getElementById('mode');
+   var netname = document.getElementById('netname');
+   var mac     = document.getElementById('mac');
+   var ip      = document.getElementById('ip');
+   var nm      = document.getElementById('nm');
+   var gw      = document.getElementById('gw');
+   var mf      = document.getElementById('mf');
+   var rt      = document.getElementById('rt');
+   var fl      = document.getElementById('fl');
+   mode.innerHTML    = d[0];
+   netname.innerHTML = d[1];
+   mac.innerHTML     = d[2];
+   ip.innerHTML      = d[3];
+   nm.innerHTML      = d[4];
+   gw.innerHTML      = d[5];
+   mf.innerHTML      = d[6]+" bytes";
+   rt.innerHTML      = d[7]+" seconds";
+   fl.innerHTML      = d[8]+" / "+d[9]+" bytes used/free";
+  }
+ </script>
+<h1>Device status</h1><table>
+<tr style="text-align:left"><th>WiFi mode:</th><th id="mode"></th></tr>
+<tr style="text-align:left"><th>Network name:</th><th id="netname"></th></tr>
+<tr style="text-align:left"><th>MAC:</th><th id="mac"></th></tr>
+<tr style="text-align:left"><th>Address:</th><th id="ip"></th></tr>
+<tr style="text-align:left"><th>Network mask:</th><th id="nm"></th></tr>
+<tr style="text-align:left"><th>Gateway:</th><th id="gw"></th></tr>
+<tr style="text-align:left"><th>Memory free:</th><th id="mf"></th></tr>
+<tr style="text-align:left"><th>Run time:</th><th id="rt"></th></tr>
+<tr style="text-align:left"><th>Flash disk:</th><th id="fl"></th></tr>
+</table></body></html><br><br>
+<a href=\about.html>About</a>
+</body></html>

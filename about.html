@@ -1,0 +1,45 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>WiFi Smartphone Holder</title></head>
+<body>
+<div>This smartphone holder is a hobby project created by Andriy Melnykov and Artem Rudskyy</div><br>
+<table><col width="200"><col width="200">
+<tr>
+<th  style="text-align:left"> <a href="javascript:PrevImage();">Previous image</a></th>
+<th  style="text-align:right"><a href="javascript:NextImage();">Next image</a></th>
+</tr></table>
+<img id="img" src="1.jpg">
+<div id="titel">Source image: 1.jpg</div>
+<br>
+<a href=\ctrl.html?image=next>Return to control</a>
+
+<script>
+class Static{}
+Static.val = 1;
+var last_img=28;
+function UpdateData(){
+  var img = document.getElementById("img");
+  var num=Static.val;
+  img.setAttribute("src", "");
+  img.setAttribute("src", num.toString(10)+".jpg");
+  
+  var titel = document.getElementById("titel");
+  titel.innerHTML="Source image: "+img.getAttribute("src");
+}
+
+function NextImage() {
+Static.val = Static.val + 1;
+if (Static.val > last_img){
+Static.val = 1;
+}
+UpdateData();
+}
+function PrevImage() {
+Static.val = Static.val - 1;
+if (Static.val < 1){
+Static.val = last_img;
+}
+UpdateData();
+}
+</script>
+
+</body>
+</html>

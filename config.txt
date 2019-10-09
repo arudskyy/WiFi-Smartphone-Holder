@@ -1,0 +1,9 @@
+valid=1;
+gw=192.168.0.1;
+ssid=NETGEAR2G;
+nm=255.255.255.0;
+pass=artemolga;
+ip=192.168.0.8;
+cc=021d64;
+file=config.txt;
+cap=6a1515;

@@ -3,7 +3,7 @@
 
 
 --global table, keeps configuration
-cfg={valid="0", file="cfg.txt"}
+cfg={valid="0", file="config.txt"}
 
 
 -- initialization of the configuration

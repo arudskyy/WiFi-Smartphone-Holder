@@ -1,0 +1,45 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>WiFi Smartphone Holder</title></head><body onload="load()">
+<a href=\ctrl.html><button>Control</button></a><a href=\set.html><button>Settings</button></a><a href=\status.html><button>Status</button></a>
+ <script type="text/javascript" src="set.json"></script>
+ <script type="text/javascript" >
+  function load(){
+   var d=JSON.parse(jd);
+   var ssid = document.getElementById('ssid');
+   var pass = document.getElementById('pass');
+   var ip   = document.getElementById('ip');
+   var nm   = document.getElementById('nm');
+   var gw   = document.getElementById('gw');
+   var cc   = document.getElementById('cc');
+   var cap  = document.getElementById('cap'); 
+   ssid.value = d[0];
+   pass.value = d[1];
+   ip.value   = d[2];
+   nm.value   = d[3];
+   gw.value   = d[4];
+   cc.value   = d[5];
+   cap.value  = d[6];
+  }
+ </script>
+<h1 style="color:red;">Provided invalid client settings</h1>
+<h2>Target network:</h2>
+<table>
+ <tr><th>Network name</th><th><input id="ssid" type="text" size="15"></th></tr>
+ <tr><th>Password</th><th><input id="pass" type="password" size="15"></th></tr>
+</table>
+<h2>IP settings:</h2>
+<table>
+ <tr><th>Address</th><th><input id="ip" type="text" size="15" style="background-color:#ffcccc;"></th></tr>
+ <tr><th>Network mask</th><th><input id="nm" type="text" size="15" style="background-color:#ffcccc;"></th></tr>
+ <tr><th>Gateway</th><th><input id="gw" type="text" size="15" style="background-color:#ffcccc;"></th></tr>
+</table>
+<h2>Mode-indicator, LED colors:</h2>
+<table>
+ <tr><th>Client </th><th><input id="cc" onchange="command('cccolor')" type="color"></th></tr>
+ <tr><th>Access point</th><th><input id="cap" onchange="command('capcolor')" type="color"></th></tr>
+</table>
+<br><br><button onClick="command('apply.html')">Apply</button>
+<script>function command(p){
+window.location="/"+p+"?ssid="+document.getElementById("ssid").value+"&pass="+document.getElementById("pass").value
++"&ip="+document.getElementById("ip").value+"&nm="+document.getElementById("nm").value+"&gw="+document.getElementById("gw").value
++"&cc="+document.getElementById("cc").value.slice(1)+"&cap="+document.getElementById("cap").value.slice(1);}
+</script></body></html>
