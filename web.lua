@@ -41,7 +41,8 @@ function web_sendfile(client, filename)
 
  if false==file.exists(filename) then
   print("web_sendfile: file not exists: "..filename)
-  client:close()
+  client:send("HTTP/1.0 404 Not Found\r\nContent-type: text/html\r\n\r\n<html><head><title>404 - Wrong Request - WiFi Smartphone Holder</title></head><body>Wrong request</body></html>")
+  --client:close()
   return
  end
 
@@ -188,6 +189,7 @@ function web_receiver(client,request)
 
  elseif("/favicon.ico"==action)then
  -- ignore
+  client:close()
 
  elseif("/status.json"==action)then
   web_status_json(client)
